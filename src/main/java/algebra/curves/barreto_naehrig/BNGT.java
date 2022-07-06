@@ -14,6 +14,7 @@ import algebra.curves.barreto_naehrig.BNFields.BNFq2;
 import algebra.curves.barreto_naehrig.BNFields.BNFq6;
 import algebra.curves.barreto_naehrig.abstract_bn_parameters.AbstractBNGTParameters;
 
+import java.io.Serializable;
 import java.math.BigInteger;
 
 public abstract class BNGT<
@@ -23,7 +24,7 @@ public abstract class BNGT<
         BNFq12T extends BNFq12<BNFqT, BNFq2T, BNFq6T, BNFq12T>,
         BNGTT extends BNGT<BNFqT, BNFq2T, BNFq6T, BNFq12T, BNGTT, BNGTParametersT>,
         BNGTParametersT extends AbstractBNGTParameters<BNFqT, BNFq2T, BNFq6T, BNFq12T, BNGTT, BNGTParametersT>>
-        extends AbstractGT<BNGTT> {
+        extends AbstractGT<BNGTT> implements Serializable {
     public final BNGTParametersT GTParameters;
     public final BNFq12T element;
 

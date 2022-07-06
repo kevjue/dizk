@@ -20,7 +20,7 @@ public class Configuration implements Serializable {
     /* Used for tracking of elapsed time since initialization */
     private final long startTime;
     /* Random Number Generator */
-    protected long seed;
+    protected Long seed;
     protected byte[] secureSeed;
     /* Context */
     protected String context;
@@ -49,7 +49,7 @@ public class Configuration implements Serializable {
     private boolean debugFlag;
 
     public Configuration() {
-        seed = 5;
+        seed = new Long(5);
         secureSeed = null;
 
         verboseFlag = true;
@@ -329,7 +329,7 @@ public class Configuration implements Serializable {
         }
     }
 
-    public void setSeed(final long _seed) {
+    public void setSeed(final Long _seed) {
         seed = _seed;
     }
 
@@ -368,7 +368,7 @@ public class Configuration implements Serializable {
         return numPartitions;
     }
 
-    public long seed() {
+    public Long seed() {
         return seed;
     }
 

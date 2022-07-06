@@ -7,6 +7,8 @@
 
 package algebra.curves.barreto_naehrig.bn254a;
 
+import java.io.Serializable;
+
 import algebra.curves.barreto_naehrig.BNGT;
 import algebra.curves.barreto_naehrig.bn254a.BN254aFields.BN254aFq;
 import algebra.curves.barreto_naehrig.bn254a.BN254aFields.BN254aFq12;
@@ -15,7 +17,7 @@ import algebra.curves.barreto_naehrig.bn254a.BN254aFields.BN254aFq6;
 import algebra.curves.barreto_naehrig.bn254a.bn254a_parameters.BN254aGTParameters;
 
 public class BN254aGT extends
-        BNGT<BN254aFq, BN254aFq2, BN254aFq6, BN254aFq12, BN254aGT, BN254aGTParameters> {
+        BNGT<BN254aFq, BN254aFq2, BN254aFq6, BN254aFq12, BN254aGT, BN254aGTParameters> implements Serializable {
 
     private static final BN254aGTParameters GTParameters = new BN254aGTParameters();
 

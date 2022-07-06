@@ -8,13 +8,24 @@
 package relations.r1cs;
 
 import algebra.fields.AbstractFieldElementExpanded;
+import configuration.Configuration;
+
+import org.apache.spark.SparkContext;
 import org.apache.spark.api.java.JavaPairRDD;
 import relations.objects.Assignment;
+import relations.objects.LinearCombination;
 import relations.objects.LinearTerm;
+import relations.objects.R1CSConstraint;
 import relations.objects.R1CSConstraintsRDD;
 import scala.Tuple2;
+import utils.Serialize;
 
+import java.io.File;
+import java.io.IOException;
 import java.io.Serializable;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * A system of R1CSRelation constraints looks like
@@ -48,6 +59,43 @@ public class R1CSRelationRDD<FieldT extends AbstractFieldElementExpanded<FieldT>
         numInputs = _numInputs;
         numAuxiliary = _numAuxiliary;
         numConstraints = _constraints.size();
+    }
+
+    public R1CSRelationRDD(
+            final R1CSRelation<FieldT> serialR1CS,
+            final Configuration config) {
+
+        numInputs = serialR1CS.numInputs();
+        numAuxiliary = serialR1CS.numVariables() - numInputs;
+        numConstraints = serialR1CS.numConstraints();
+
+        List<Tuple2<Long, LinearTerm<FieldT>>> serialA = new ArrayList<Tuple2<Long, LinearTerm<FieldT>>>();
+        List<Tuple2<Long, LinearTerm<FieldT>>> serialB = new ArrayList<Tuple2<Long, LinearTerm<FieldT>>>();
+        List<Tuple2<Long, LinearTerm<FieldT>>> serialC = new ArrayList<Tuple2<Long, LinearTerm<FieldT>>>();
+
+        for (int i = 0; i < serialR1CS.numConstraints(); i++) {
+            R1CSConstraint<FieldT> constraint = serialR1CS.constraints(i);
+
+            LinearCombination<FieldT> A = constraint.A();
+            for (int j = 0; j < A.terms().size(); j++) {
+                serialA.add(new Tuple2<Long,LinearTerm<FieldT>>(new Long(i), A.get(j)));
+            }
+
+            LinearCombination<FieldT> B = constraint.B();
+            for (int j = 0; j < B.terms().size(); j++) {
+                serialB.add(new Tuple2<Long,LinearTerm<FieldT>>(new Long(i), B.get(j)));
+            }
+
+            LinearCombination<FieldT> C = constraint.C();
+            for (int j = 0; j < C.terms().size(); j++) {
+                serialC.add(new Tuple2<Long,LinearTerm<FieldT>>(new Long(i), C.get(j)));
+            }
+        }
+
+        constraints = new R1CSConstraintsRDD<>(config.sparkContext().parallelizePairs(serialA),
+            config.sparkContext().parallelizePairs(serialB),
+            config.sparkContext().parallelizePairs(serialC),
+            numConstraints);
     }
 
     public boolean isValid() {
@@ -153,4 +201,28 @@ public class R1CSRelationRDD<FieldT extends AbstractFieldElementExpanded<FieldT>
         return numConstraints;
     }
 
+    public void saveAsObjectFile(String dirName) throws IOException {
+        File directory = new File(dirName);
+
+        directory.mkdir();
+
+        constraints.saveAsObjectFile(Paths.get(dirName, "constraints").toString());
+
+        Serialize.SerializeObject(numInputs, Paths.get(dirName, "numInputs").toString());
+        Serialize.SerializeObject(numAuxiliary, Paths.get(dirName, "numAuxiliary").toString());
+        Serialize.SerializeObject(numConstraints, Paths.get(dirName, "numConstraints").toString());
+    }
+
+    public static <FieldT extends AbstractFieldElementExpanded<FieldT>> R1CSRelationRDD<FieldT> loadFromObjectFile(String dirName, SparkContext sc, Configuration config) throws IOException{
+        final R1CSConstraintsRDD<FieldT> _constraints = R1CSConstraintsRDD.loadFromObjectFile(Paths.get(dirName, "constraints").toString(), sc, config);
+        final int _numInputs = (int) Serialize.UnserializeObject(Paths.get(dirName, "numInputs").toString());
+        final long _numAuxiliary = (long) Serialize.UnserializeObject(Paths.get(dirName, "numAuxiliary").toString());
+
+        return new R1CSRelationRDD<FieldT>(_constraints, _numInputs, _numAuxiliary);
+    }
+
+    public static long getNumConstraintsFromFile(String dirName) throws IOException {
+        final long _numConstraints = (long) Serialize.UnserializeObject(Paths.get(dirName, "numConstraints").toString());
+        return _numConstraints;
+    }
 }

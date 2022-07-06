@@ -7,10 +7,12 @@
 
 package zk_proof_systems.zkSNARK.objects;
 
+import java.io.Serializable;
+
 import algebra.curves.AbstractG1;
 import algebra.curves.AbstractG2;
 
-public class Proof<G1T extends AbstractG1<G1T>, G2T extends AbstractG2<G2T>> {
+public class Proof<G1T extends AbstractG1<G1T>, G2T extends AbstractG2<G2T>> implements Serializable {
 
     private final G1T gA;
     private final G2T gB;

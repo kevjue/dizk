@@ -11,10 +11,12 @@ import algebra.curves.AbstractG1;
 import algebra.curves.AbstractG2;
 import algebra.curves.AbstractGT;
 
+import java.io.Serializable;
 import java.util.List;
 
 public class VerificationKey<G1T extends AbstractG1<G1T>, G2T extends AbstractG2<G2T>, GTT
-        extends AbstractGT<GTT>> {
+        extends AbstractGT<GTT>> implements
+        Serializable {
 
     private final GTT alphaG1betaG2;
     private final G2T gammaG2;

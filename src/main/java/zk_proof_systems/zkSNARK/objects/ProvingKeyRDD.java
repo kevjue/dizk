@@ -8,13 +8,22 @@
 package zk_proof_systems.zkSNARK.objects;
 
 import algebra.fields.AbstractFieldElementExpanded;
+import configuration.Configuration;
 import algebra.curves.AbstractG1;
 import algebra.curves.AbstractG2;
+
+import org.apache.spark.SparkContext;
 import org.apache.spark.api.java.JavaPairRDD;
+import org.apache.spark.rdd.RDD;
+
 import relations.r1cs.R1CSRelationRDD;
 import scala.Tuple2;
+import utils.Serialize;
 
+import java.io.File;
+import java.io.IOException;
 import java.io.Serializable;
+import java.nio.file.Paths;
 
 public class ProvingKeyRDD<FieldT extends AbstractFieldElementExpanded<FieldT>, G1T extends
         AbstractG1<G1T>, G2T extends AbstractG2<G2T>> implements
@@ -93,4 +102,70 @@ public class ProvingKeyRDD<FieldT extends AbstractFieldElementExpanded<FieldT>, 
     public R1CSRelationRDD<FieldT> r1cs() {
         return r1cs;
     }
+
+    public void saveAsObjectFile(String dirName) throws IOException {
+        File directory = new File(dirName);
+
+        directory.mkdir();
+
+        Serialize.SerializeObject(alphaG1, Paths.get(dirName, "alphaG1").toString());
+        Serialize.SerializeObject(betaG1, Paths.get(dirName, "betaG1").toString());
+        Serialize.SerializeObject(betaG2, Paths.get(dirName, "betaG2").toString());
+        Serialize.SerializeObject(deltaG1, Paths.get(dirName, "deltaG1").toString());
+        Serialize.SerializeObject(deltaG2, Paths.get(dirName, "deltaG2").toString());
+
+        deltaABCG1.saveAsObjectFile(Paths.get(dirName, "deltaABC").toString());
+        queryA.saveAsObjectFile(Paths.get(dirName, "queryA").toString());
+        queryB.saveAsObjectFile(Paths.get(dirName, "queryB").toString());
+        queryH.saveAsObjectFile(Paths.get(dirName, "queryH").toString());
+        r1cs.saveAsObjectFile(Paths.get(dirName, "r1cs").toString());
+    }
+
+    public static <FieldT extends AbstractFieldElementExpanded<FieldT>, G1T extends
+    AbstractG1<G1T>, G2T extends AbstractG2<G2T>> ProvingKeyRDD<FieldT, G1T, G2T> loadFromObjectFile(String dirName, SparkContext sc, Configuration config) throws IOException{
+        final G1T _alphaG1 = (G1T) Serialize.UnserializeObject(Paths.get(dirName, "alphaG1").toString());
+        final G1T _betaG1 = (G1T) Serialize.UnserializeObject(Paths.get(dirName, "betaG1").toString());
+        final G2T _betaG2 = (G2T) Serialize.UnserializeObject(Paths.get(dirName, "betaG2").toString());
+        final G1T _deltaG1 = (G1T) Serialize.UnserializeObject(Paths.get(dirName, "deltaG1").toString());
+        final G2T _deltaG2 = (G2T) Serialize.UnserializeObject(Paths.get(dirName, "deltaG2").toString());
+
+        RDD<Tuple2<Long, G1T>> _deltaABCRDD = sc.objectFile(Paths.get(dirName, "deltaABC").toString(),
+                                                            config.numPartitions(), null);
+
+        JavaPairRDD<Long, G1T> _deltaABC =  _deltaABCRDD.toJavaRDD().mapToPair(e -> e);
+
+        RDD<Tuple2<Long, G1T>> _queryARDD = sc.objectFile(Paths.get(dirName, "queryA").toString(),
+                                                            config.numPartitions(), null);
+
+        JavaPairRDD<Long, G1T> _queryA = _queryARDD.toJavaRDD().mapToPair(e -> e);
+
+        RDD<Tuple2<Long, Tuple2<G1T, G2T>>> _queryBRDD = sc.objectFile(Paths.get(dirName, "queryB").toString(),
+                                                            config.numPartitions(), null);
+
+        JavaPairRDD<Long, Tuple2<G1T, G2T>> _queryB =  _queryBRDD.toJavaRDD().mapToPair(e -> e);
+
+        RDD<Tuple2<Long, G1T>> _queryHRDD = sc.objectFile(Paths.get(dirName, "queryH").toString(),
+                                                            config.numPartitions(), null);
+
+        JavaPairRDD<Long, G1T> _queryH =  _queryHRDD.toJavaRDD().mapToPair(e -> e);
+
+        R1CSRelationRDD<FieldT> _r1cs = R1CSRelationRDD.loadFromObjectFile(Paths.get(dirName, "r1cs").toString(),
+                                                                                sc, config);
+
+        return new ProvingKeyRDD<FieldT, G1T, G2T>(_alphaG1,
+                                                _betaG1,
+                                                _betaG2,
+                                                _deltaG1,
+                                                _deltaG2,
+                                                _deltaABC,
+                                                _queryA,
+                                                _queryB,
+                                                _queryH,
+                                                _r1cs);
+    }
+
+    public static long getNumConstraintsFromFile(String dirName) throws IOException {
+        return R1CSRelationRDD.getNumConstraintsFromFile(dirName);
+    }
+
 }
