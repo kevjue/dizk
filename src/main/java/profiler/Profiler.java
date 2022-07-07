@@ -309,9 +309,11 @@ public class Profiler {
 
                 ProvingKey<BN254aFr, BN254aG1, BN254aG2> pk = null;
                 ProvingKeyRDD<BN254aFr, BN254aG1, BN254aG2> pkRDD = null;
+                int numInputs;
                 if (runMode.equals("serial")) {
                     config = new Configuration();
                     pk = (ProvingKey<BN254aFr, BN254aG1, BN254aG2>) Serialize.UnserializeObject(provingKeyFilename);
+                    numInputs = pk.r1cs().numInputs();
                 } else {  // "runMode == distributed"
                     final int numExecutors = 1;
                     final int numCores = 1;
@@ -337,7 +339,8 @@ public class Profiler {
                         StorageLevel.MEMORY_AND_DISK_SER());
 
                     config.setSeed(null);
-                    pkRDD = ProvingKeyRDD.loadFromObjectFile(provingKeyFilename, config.sparkContext().sc(), config);
+                    pkRDD = ProvingKeyRDD.loadFromObjectFile(provingKeyFilename, config);
+                    numInputs = pkRDD.r1cs().numInputs();
                 }
 
                 FileReader witnessFR = null;
@@ -347,7 +350,7 @@ public class Profiler {
                     e.printStackTrace();
                 }
 
-                final Tuple2<Assignment<BN254aFr>, Assignment<BN254aFr>> witnessTuple = Circom.readWitnessFile(witnessFR, pk.r1cs().numInputs());
+                final Tuple2<Assignment<BN254aFr>, Assignment<BN254aFr>> witnessTuple = Circom.readWitnessFile(witnessFR, numInputs);
                 final BN254aFr fieldFactory = new BN254aFr(2L);
                 Proof<BN254aG1, BN254aG2> proof;
                 if (runMode.equals("serial")) {

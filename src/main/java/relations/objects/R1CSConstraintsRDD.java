@@ -12,10 +12,8 @@ import configuration.Configuration;
 import scala.Tuple2;
 import utils.Serialize;
 
-import org.apache.spark.SparkContext;
 import org.apache.spark.api.java.JavaPairRDD;
-import org.apache.spark.rdd.RDD;
-
+import org.apache.spark.api.java.JavaRDD;
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
@@ -81,26 +79,20 @@ public class R1CSConstraintsRDD<FieldT extends AbstractFieldElementExpanded<Fiel
 
         A.saveAsObjectFile(Paths.get(dirName, "A").toString());
         B.saveAsObjectFile(Paths.get(dirName, "B").toString());
-        C.saveAsObjectFile(Paths.get(dirName, "B").toString());
+        C.saveAsObjectFile(Paths.get(dirName, "C").toString());
 
         Serialize.SerializeObject(constraintSize, Paths.get(dirName, "constraintSize").toString());
     }
 
-    public static <FieldT extends AbstractFieldElementExpanded<FieldT>> R1CSConstraintsRDD<FieldT> loadFromObjectFile(String dirName, SparkContext sc, Configuration config) throws IOException{
-        final RDD<Tuple2<Long, LinearTerm<FieldT>>> _ARDD = sc.objectFile(Paths.get(dirName, "A").toString(),
-                                                            config.numPartitions(), null);
+    public static <FieldT extends AbstractFieldElementExpanded<FieldT>> R1CSConstraintsRDD<FieldT> loadFromObjectFile(String dirName, Configuration config) throws IOException{
+        final JavaRDD<Tuple2<Long, LinearTerm<FieldT>>> _ARDD = config.sparkContext().objectFile(Paths.get(dirName, "A").toString());
+        final JavaPairRDD<Long, LinearTerm<FieldT>> _A =  _ARDD.mapToPair(e -> e);
 
-        final JavaPairRDD<Long, LinearTerm<FieldT>> _A =  _ARDD.toJavaRDD().mapToPair(e -> e);
+        final JavaRDD<Tuple2<Long, LinearTerm<FieldT>>> _BRDD = config.sparkContext().objectFile(Paths.get(dirName, "B").toString());
+        final JavaPairRDD<Long, LinearTerm<FieldT>> _B =  _BRDD.mapToPair(e -> e);
 
-        final RDD<Tuple2<Long, LinearTerm<FieldT>>> _BRDD = sc.objectFile(Paths.get(dirName, "B").toString(),
-                                                            config.numPartitions(), null);
-
-        final JavaPairRDD<Long, LinearTerm<FieldT>> _B =  _BRDD.toJavaRDD().mapToPair(e -> e);
-
-        final RDD<Tuple2<Long, LinearTerm<FieldT>>> _CRDD = sc.objectFile(Paths.get(dirName, "C").toString(),
-        config.numPartitions(), null);
-
-        final JavaPairRDD<Long, LinearTerm<FieldT>> _C =  _CRDD.toJavaRDD().mapToPair(e -> e);
+        final JavaRDD<Tuple2<Long, LinearTerm<FieldT>>> _CRDD = config.sparkContext().objectFile(Paths.get(dirName, "C").toString());
+        final JavaPairRDD<Long, LinearTerm<FieldT>> _C =  _CRDD.mapToPair(e -> e);
 
         final long _constraintSize = (long) Serialize.UnserializeObject(Paths.get(dirName, "constraintSize").toString());
 

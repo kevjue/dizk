@@ -10,7 +10,6 @@ package relations.r1cs;
 import algebra.fields.AbstractFieldElementExpanded;
 import configuration.Configuration;
 
-import org.apache.spark.SparkContext;
 import org.apache.spark.api.java.JavaPairRDD;
 import relations.objects.Assignment;
 import relations.objects.LinearCombination;
@@ -213,8 +212,8 @@ public class R1CSRelationRDD<FieldT extends AbstractFieldElementExpanded<FieldT>
         Serialize.SerializeObject(numConstraints, Paths.get(dirName, "numConstraints").toString());
     }
 
-    public static <FieldT extends AbstractFieldElementExpanded<FieldT>> R1CSRelationRDD<FieldT> loadFromObjectFile(String dirName, SparkContext sc, Configuration config) throws IOException{
-        final R1CSConstraintsRDD<FieldT> _constraints = R1CSConstraintsRDD.loadFromObjectFile(Paths.get(dirName, "constraints").toString(), sc, config);
+    public static <FieldT extends AbstractFieldElementExpanded<FieldT>> R1CSRelationRDD<FieldT> loadFromObjectFile(String dirName,Configuration config) throws IOException{
+        final R1CSConstraintsRDD<FieldT> _constraints = R1CSConstraintsRDD.loadFromObjectFile(Paths.get(dirName, "constraints").toString(), config);
         final int _numInputs = (int) Serialize.UnserializeObject(Paths.get(dirName, "numInputs").toString());
         final long _numAuxiliary = (long) Serialize.UnserializeObject(Paths.get(dirName, "numAuxiliary").toString());
 

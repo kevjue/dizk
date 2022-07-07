@@ -12,10 +12,8 @@ import configuration.Configuration;
 import algebra.curves.AbstractG1;
 import algebra.curves.AbstractG2;
 
-import org.apache.spark.SparkContext;
 import org.apache.spark.api.java.JavaPairRDD;
-import org.apache.spark.rdd.RDD;
-
+import org.apache.spark.api.java.JavaRDD;
 import relations.r1cs.R1CSRelationRDD;
 import scala.Tuple2;
 import utils.Serialize;
@@ -122,35 +120,26 @@ public class ProvingKeyRDD<FieldT extends AbstractFieldElementExpanded<FieldT>, 
     }
 
     public static <FieldT extends AbstractFieldElementExpanded<FieldT>, G1T extends
-    AbstractG1<G1T>, G2T extends AbstractG2<G2T>> ProvingKeyRDD<FieldT, G1T, G2T> loadFromObjectFile(String dirName, SparkContext sc, Configuration config) throws IOException{
+    AbstractG1<G1T>, G2T extends AbstractG2<G2T>> ProvingKeyRDD<FieldT, G1T, G2T> loadFromObjectFile(String dirName, Configuration config) throws IOException{
         final G1T _alphaG1 = (G1T) Serialize.UnserializeObject(Paths.get(dirName, "alphaG1").toString());
         final G1T _betaG1 = (G1T) Serialize.UnserializeObject(Paths.get(dirName, "betaG1").toString());
         final G2T _betaG2 = (G2T) Serialize.UnserializeObject(Paths.get(dirName, "betaG2").toString());
         final G1T _deltaG1 = (G1T) Serialize.UnserializeObject(Paths.get(dirName, "deltaG1").toString());
         final G2T _deltaG2 = (G2T) Serialize.UnserializeObject(Paths.get(dirName, "deltaG2").toString());
 
-        RDD<Tuple2<Long, G1T>> _deltaABCRDD = sc.objectFile(Paths.get(dirName, "deltaABC").toString(),
-                                                            config.numPartitions(), null);
+        JavaRDD<Tuple2<Long, G1T>> _deltaABCRDD = config.sparkContext().objectFile(Paths.get(dirName, "deltaABC").toString());
+        JavaPairRDD<Long, G1T> _deltaABC =  _deltaABCRDD.mapToPair(e -> e);
 
-        JavaPairRDD<Long, G1T> _deltaABC =  _deltaABCRDD.toJavaRDD().mapToPair(e -> e);
+        JavaRDD<Tuple2<Long, G1T>> _queryARDD = config.sparkContext().objectFile(Paths.get(dirName, "queryA").toString());
+        JavaPairRDD<Long, G1T> _queryA = _queryARDD.mapToPair(e -> e);
 
-        RDD<Tuple2<Long, G1T>> _queryARDD = sc.objectFile(Paths.get(dirName, "queryA").toString(),
-                                                            config.numPartitions(), null);
+        JavaRDD<Tuple2<Long, Tuple2<G1T, G2T>>> _queryBRDD = config.sparkContext().objectFile(Paths.get(dirName, "queryB").toString());
+        JavaPairRDD<Long, Tuple2<G1T, G2T>> _queryB =  _queryBRDD.mapToPair(e -> e);
 
-        JavaPairRDD<Long, G1T> _queryA = _queryARDD.toJavaRDD().mapToPair(e -> e);
+        JavaRDD<Tuple2<Long, G1T>> _queryHRDD = config.sparkContext().objectFile(Paths.get(dirName, "queryH").toString());
+        JavaPairRDD<Long, G1T> _queryH =  _queryHRDD.mapToPair(e -> e);
 
-        RDD<Tuple2<Long, Tuple2<G1T, G2T>>> _queryBRDD = sc.objectFile(Paths.get(dirName, "queryB").toString(),
-                                                            config.numPartitions(), null);
-
-        JavaPairRDD<Long, Tuple2<G1T, G2T>> _queryB =  _queryBRDD.toJavaRDD().mapToPair(e -> e);
-
-        RDD<Tuple2<Long, G1T>> _queryHRDD = sc.objectFile(Paths.get(dirName, "queryH").toString(),
-                                                            config.numPartitions(), null);
-
-        JavaPairRDD<Long, G1T> _queryH =  _queryHRDD.toJavaRDD().mapToPair(e -> e);
-
-        R1CSRelationRDD<FieldT> _r1cs = R1CSRelationRDD.loadFromObjectFile(Paths.get(dirName, "r1cs").toString(),
-                                                                                sc, config);
+        R1CSRelationRDD<FieldT> _r1cs = R1CSRelationRDD.loadFromObjectFile(Paths.get(dirName, "r1cs").toString(), config);
 
         return new ProvingKeyRDD<FieldT, G1T, G2T>(_alphaG1,
                                                 _betaG1,
@@ -165,7 +154,7 @@ public class ProvingKeyRDD<FieldT extends AbstractFieldElementExpanded<FieldT>, 
     }
 
     public static long getNumConstraintsFromFile(String dirName) throws IOException {
-        return R1CSRelationRDD.getNumConstraintsFromFile(dirName);
+        return R1CSRelationRDD.getNumConstraintsFromFile(Paths.get(dirName, "r1cs").toString());
     }
 
 }
