@@ -25,6 +25,7 @@ import zk_proof_systems.zkSNARK.objects.ProvingKeyRDD;
 import zk_proof_systems.zkSNARK.objects.VerificationKey;
 
 import java.util.List;
+import java.util.Random;
 
 public class DistributedSetup {
     public static <FieldT extends AbstractFieldElementExpanded<FieldT>,
@@ -40,13 +41,26 @@ public class DistributedSetup {
             final PairingT pairing,
             final Configuration config) {
         // Generate secret randomness.
-        final FieldT t = fieldFactory.random(config.seed(), config.secureSeed());
-        final FieldT alpha = fieldFactory.random(config.seed(), config.secureSeed());
-        final FieldT beta = fieldFactory.random(config.seed(), config.secureSeed());
-        final FieldT gamma = fieldFactory.random(config.seed(), config.secureSeed());
-        final FieldT delta = fieldFactory.random(config.seed(), config.secureSeed());
+        final Long randT = config.hasRNG() ? config.nextRNLong() : new Random().nextLong();
+        final FieldT t = fieldFactory.construct(randT);
+        final Long randAlpha = config.hasRNG() ? config.nextRNLong() : new Random().nextLong();
+        final FieldT alpha = fieldFactory.construct(randAlpha);
+        final Long randBeta = config.hasRNG() ? config.nextRNLong() : new Random().nextLong();
+        final FieldT beta = fieldFactory.construct(randBeta);
+        final Long randGamma = config.hasRNG() ? config.nextRNLong() : new Random().nextLong();
+        final FieldT gamma = fieldFactory.construct(randGamma);
+        final Long randDelta = config.hasRNG() ? config.nextRNLong() : new Random().nextLong();
+        final FieldT delta = fieldFactory.construct(randDelta);
         final FieldT inverseGamma = gamma.inverse();
         final FieldT inverseDelta = delta.inverse();
+
+        if (config.debugFlag()) {
+                System.out.println("t: \t" + t);
+                System.out.println("alpha: \t" + alpha);
+                System.out.println("beta: \t" + beta);
+                System.out.println("gamma: \t" + gamma);
+                System.out.println("delta: \t" + delta);
+        }
 
         // A quadratic arithmetic program evaluated at t.
         final QAPRelationRDD<FieldT> qap = R1CStoQAPRDD.R1CStoQAPRelation(r1cs, t, config);
@@ -79,7 +93,11 @@ public class DistributedSetup {
         config.endLog("Computing query densities");
 
         config.beginLog("Generating G1 MSM Window Table");
-        final G1T generatorG1 = g1Factory.random(config.seed(), config.secureSeed());
+        final FieldT G1Scalar = fieldFactory.construct(config.hasRNG() ? config.nextRNLong() : new Random().nextLong());
+        if (config.debugFlag()) {
+            System.out.println("G1 scalar: " + G1Scalar);
+        }
+        final G1T generatorG1 = g1Factory.one().mul(G1Scalar);
         final int scalarSizeG1 = generatorG1.bitSize();
         final long scalarCountG1 = numNonZeroAt + numNonZeroBt + numVariables;
         final int windowSizeG1 = FixedBaseMSM.getWindowSize(scalarCountG1 / numPartitions, generatorG1);
@@ -88,7 +106,11 @@ public class DistributedSetup {
         config.endLog("Generating G1 MSM Window Table");
 
         config.beginLog("Generating G2 MSM Window Table");
-        final G2T generatorG2 = g2Factory.random(config.seed(), config.secureSeed());
+        final FieldT G2Scalar = fieldFactory.construct(config.hasRNG() ? config.nextRNLong() : new Random().nextLong());
+        if (config.debugFlag()) {
+            System.out.println("G2 scalar: " + G2Scalar);
+        }
+        final G2T generatorG2 = g2Factory.one().mul(G2Scalar);
         final int scalarSizeG2 = generatorG2.bitSize();
         final long scalarCountG2 = numNonZeroBt;
         final int windowSizeG2 = FixedBaseMSM.getWindowSize(scalarCountG2 / numPartitions, generatorG2);

@@ -5,9 +5,11 @@ import org.apache.spark.storage.StorageLevel;
 import scala.Tuple2;
 
 import java.io.*;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.Random;
 import java.util.Stack;
 
 /**
@@ -21,7 +23,9 @@ public class Configuration implements Serializable {
     private final long startTime;
     /* Random Number Generator */
     protected Long seed;
+    private Random RNG;
     protected byte[] secureSeed;
+    private SecureRandom secureRNG;
     /* Context */
     protected String context;
     /* Verbose Flag */
@@ -331,10 +335,34 @@ public class Configuration implements Serializable {
 
     public void setSeed(final Long _seed) {
         seed = _seed;
+        if (seed != null) {
+            RNG = new Random(seed);
+        } else {
+            RNG = null;
+        }
     }
 
     public void setSecureSeed(final byte[] _secureSeed) {
         secureSeed = _secureSeed;
+        if (secureSeed != null && secureSeed.length > 0) {
+            secureRNG = new SecureRandom(secureSeed);
+        } else {
+            secureRNG = null;
+        }
+    }
+
+    public boolean hasRNG() {
+        return (secureRNG != null) || (RNG != null);
+    }
+
+    public Long nextRNLong() {
+        if (secureRNG != null) {
+            return secureRNG.nextLong();
+        } else if (RNG != null) {
+            return RNG.nextLong();
+        } else {
+            return null;
+        }
     }
 
     public void setVerboseFlag(final boolean _verboseFlag) {
