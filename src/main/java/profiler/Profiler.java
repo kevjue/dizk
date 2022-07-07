@@ -463,7 +463,7 @@ public class Profiler {
                 System.out.println("Proving key");
                 System.out.println("\talphaG1:\t" + alphaG1.toAffineCoordinates());
                 System.out.println("\tbetaG1:\t\t" + betaG1.toAffineCoordinates());
-                System.out.println("\tbetaG2:\t\r" + betaG2.toAffineCoordinates());
+                System.out.println("\tbetaG2:\t\t" + betaG2.toAffineCoordinates());
                 System.out.println("\tdeltaG1:\t" + deltaG1.toAffineCoordinates());
                 System.out.println("\tdeltaG2:\t" + deltaG2.toAffineCoordinates());
 
@@ -510,6 +510,15 @@ public class Profiler {
                     System.out.println("\t\t" + vk.gammaABC().get(i).toAffineCoordinates());
                 }
                 System.out.println("\t]");
+            } else if (input.equals("print_proof")) {
+                final String proofFilename = args[1];
+
+                Proof<BN254aG1, BN254aG2> proof = (Proof<BN254aG1, BN254aG2>) Serialize.UnserializeObject(proofFilename);
+
+                System.out.println("Proof");
+                System.out.println("\tgA: \t" + proof.gA().toAffineCoordinates());
+                System.out.println("\tgB: \t" + proof.gB().toAffineCoordinates());
+                System.out.println("\tgC: \t" + proof.gC().toAffineCoordinates());
 
             } else if (args.length == 2) {
                 final String app = args[0].toLowerCase();
