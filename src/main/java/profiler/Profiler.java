@@ -5,6 +5,7 @@ import configuration.Configuration;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -358,10 +359,12 @@ public class Profiler {
                 if (runMode.equals("serial")) {
                     proof = SerialProver.prove(pk, witnessTuple._1(), witnessTuple._2(), fieldFactory, config);
                 } else {  // "runMode == distributed"
-                    List<BN254aFr> witness = witnessTuple._2().elements();
-                    List<Tuple2<Long, BN254aFr>> witnessPairs = IntStream.range(0, witness.size()).mapToObj(i -> new Tuple2<>(new Long(i), witness.get(i))).collect(Collectors.toList());
-                    JavaPairRDD<Long, BN254aFr> witnessRDD = config.sparkContext().parallelizePairs(witnessPairs);
-                    proof = DistributedProver.prove(pkRDD, witnessTuple._1(), witnessRDD, fieldFactory, config);
+                    List<BN254aFr> oneFullAssignment = new ArrayList<BN254aFr>();
+                    oneFullAssignment.addAll(witnessTuple._1().elements());
+                    oneFullAssignment.addAll(witnessTuple._2().elements());
+                    List<Tuple2<Long, BN254aFr>> fullWitnessPairs = IntStream.range(0, oneFullAssignment.size()).mapToObj(i -> new Tuple2<>(new Long(i), oneFullAssignment.get(i))).collect(Collectors.toList());
+                    JavaPairRDD<Long, BN254aFr> fullWitnessRDD = config.sparkContext().parallelizePairs(fullWitnessPairs);
+                    proof = DistributedProver.prove(pkRDD, witnessTuple._1(), fullWitnessRDD, fieldFactory, config);
                 }
 
                 Serialize.SerializeObject(proof, proofFilename);
@@ -484,7 +487,6 @@ public class Profiler {
                     System.out.println("\t\t" + queryB.get(i)._1().toAffineCoordinates());
                 }
                 System.out.println("\t]");
-
 
                 System.out.println("\tqueryB G2:\n\t[");
                 for (int i = 0; i < queryB.size(); i++) {

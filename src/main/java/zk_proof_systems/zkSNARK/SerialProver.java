@@ -8,6 +8,9 @@
 package zk_proof_systems.zkSNARK;
 
 import algebra.fields.AbstractFieldElementExpanded;
+
+import java.util.Random;
+
 import algebra.curves.AbstractG1;
 import algebra.curves.AbstractG2;
 import algebra.msm.VariableBaseMSM;
@@ -51,11 +54,28 @@ public class SerialProver {
             final FieldT t = fieldFactory.random(config.seed(), config.secureSeed());
             final QAPRelation<FieldT> qap = R1CStoQAP.R1CStoQAPRelation(provingKey.r1cs(), t);
             assert (qap.isSatisfied(qapWitness));
+
+            System.out.println("QAP witness H coefficients:\n\t[");
+            for (int i = 0; i < qapWitness.coefficientsH().size(); i++) {
+                System.out.println("\t\t" + qapWitness.coefficientsH().get(i));
+            }
+            System.out.println("\t]");
+
+            System.out.println("QAP witness ABC coefficients:\n\t[");
+            for (int i = 0; i < qapWitness.coefficientsABC().size(); i++) {
+                System.out.println("\t\t" + qapWitness.coefficientsABC().get(i));
+            }
+            System.out.println("\t]");
         }
 
         // Choose two random field elements for prover zero-knowledge.
-        final FieldT r = fieldFactory.random(config.seed(), config.secureSeed());
-        final FieldT s = fieldFactory.random(config.seed(), config.secureSeed());
+        final FieldT r = fieldFactory.construct(config.hasRNG() ? config.nextRNLong() : new Random().nextLong());
+        final FieldT s = fieldFactory.construct(config.hasRNG() ? config.nextRNLong() : new Random().nextLong());
+
+        if (config.debugFlag()) {
+                System.out.println("r: \t" + r);
+                System.out.println("s: \t" + s);
+        }
 
         // Get initial parameters from the proving key.
         final G1T alphaG1 = provingKey.alphaG1();

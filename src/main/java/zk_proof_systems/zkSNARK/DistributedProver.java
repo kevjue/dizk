@@ -12,6 +12,11 @@ import algebra.curves.AbstractG1;
 import algebra.curves.AbstractG2;
 import algebra.msm.VariableBaseMSM;
 import configuration.Configuration;
+
+import java.util.List;
+import java.util.Random;
+import java.util.stream.Collectors;
+
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import reductions.r1cs_to_qap.R1CStoQAPRDD;
@@ -56,6 +61,20 @@ public class DistributedProver {
             final QAPRelationRDD<FieldT> qap = R1CStoQAPRDD
                     .R1CStoQAPRelation(provingKey.r1cs(), t, config);
             assert (qap.isSatisfied(qapWitness));
+
+            List<FieldT> coefficientsH = qapWitness.coefficientsH().sortByKey().collect().stream().map(e -> e._2()).collect(Collectors.toList());
+            System.out.println("QAP witness H coefficients:\n\t[");
+            for (int i = 0; i < coefficientsH.size(); i++) {
+                System.out.println("\t\t" + coefficientsH.get(i));
+            }
+            System.out.println("\t]");
+
+            List<FieldT> coefficientsABC = qapWitness.coefficientsABC().sortByKey().collect().stream().map(e -> e._2()).collect(Collectors.toList());
+            System.out.println("QAP witness ABC coefficients:\n\t[");
+            for (int i = 0; i < coefficientsABC.size(); i++) {
+                System.out.println("\t\t" + coefficientsABC.get(i));
+            }
+            System.out.println("\t]");
         }
 
         // Unpersist the R1CS constraints RDDs and free up memory.
@@ -64,8 +83,13 @@ public class DistributedProver {
         provingKey.r1cs().constraints().C().unpersist();
 
         // Choose two random field elements for prover zero-knowledge.
-        final FieldT r = fieldFactory.random(config.seed(), config.secureSeed());
-        final FieldT s = fieldFactory.random(config.seed(), config.secureSeed());
+        final FieldT r = fieldFactory.construct(config.hasRNG() ? config.nextRNLong() : new Random().nextLong());
+        final FieldT s = fieldFactory.construct(config.hasRNG() ? config.nextRNLong() : new Random().nextLong());
+
+        if (config.debugFlag()) {
+                System.out.println("r: \t" + r);
+                System.out.println("s: \t" + s);
+        }
 
         // Get initial parameters from the proving key.
         final G1T alphaG1 = provingKey.alphaG1();
