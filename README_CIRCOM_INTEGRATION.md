@@ -10,7 +10,7 @@ As part of the 0xPARC 2022 summer residency, this dizk-fork was created to enabl
 
 
 ## Run instructions
-Set your AWS access keys env variables
+Set your AWS env variables
 ```
 export AWS_ACCESS_KEY_ID=<Your AWS access key>
 export AWS_SECRET_ACCESS_KEY=<Your AWS secret key>
@@ -57,6 +57,11 @@ python3 -m flintrock run-command --ec2-identity-file=$AWS_EC2_IDENTITY_FILE --ec
 python3 -m flintrock run-command --ec2-identity-file=$AWS_EC2_IDENTITY_FILE --ec2-vpc-id=$AWS_EC2_VPC_ID --ec2-user=ec2-user test-cluster "s3cmd get s3://dizk-circom-demo/test_ecdsa_verify.vk ."
 
 python3 -m flintrock run-command --ec2-identity-file=$AWS_EC2_IDENTITY_FILE --ec2-vpc-id=$AWS_EC2_VPC_ID --ec2-user=ec2-user test-cluster "s3cmd get s3://dizk-circom-demo/test_ecdsa_verify.input.json ."
+```
+
+Make events directory
+```xslt
+python3 -m flintrock run-command --ec2-identity-file=$AWS_EC2_IDENTITY_FILE --ec2-vpc-id=$AWS_EC2_VPC_ID  --ec2-user=ec2-user test-cluster "mkdir /tmp/spark-events"
 ```
 
 SSH onto the cluster's master node
