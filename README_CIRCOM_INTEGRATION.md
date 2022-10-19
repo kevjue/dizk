@@ -17,12 +17,13 @@ export AWS_SECRET_ACCESS_KEY=<Your AWS secret key>
 export AWS_EC2_VPC_ID=<Your AWS VPC ID>
 export AWS_EC2_IDENTITY_FILE=<Your ssh cer/pem file>
 export AWS_EC2_KEY_NAME=<Your EC2 keypair name>
+export AWS_EC2_SUBNET_ID=<Your EC2 subnet id>
 ```
 
 
 Spin up the AWS spark cluster and install Spark
 ```$xslt
-python3 -m flintrock launch --num-slaves 8 --spark-version 2.2.0 --hdfs-version=2.6 --ec2-key-name=$AWS_EC2_KEY_NAME --ec2-identity-file=$AWS_EC2_IDENTITY_FILE --ec2-ami=ami-0aeeebd8d2ab47354 --ec2-user=ec2-user --spark-download-source=https://archive.apache.org/dist/spark/spark-2.2.0/ --ec2-vpc-id=$AWS_EC2_VPC_ID --ec2-subnet-id=$AWS_EC2_VPC_ID --ec2-instance-type=t3.2xlarge --ec2-security-group spark-dashboard --ec2-min-root-ebs-size-gb 400 --spark-executor-instances 50 test-cluster
+python3 -m flintrock launch --num-slaves 8 --spark-version 2.2.0 --hdfs-version=2.6 --ec2-key-name=$AWS_EC2_KEY_NAME --ec2-identity-file=$AWS_EC2_IDENTITY_FILE --ec2-ami=ami-0aeeebd8d2ab47354 --ec2-user=ec2-user --spark-download-source=https://archive.apache.org/dist/spark/spark-2.2.0/ --ec2-vpc-id=$AWS_EC2_VPC_ID --ec2-subnet-id=$AWS_EC2_SUBNET_ID --ec2-instance-type=t3.2xlarge --ec2-security-group spark-dashboard --ec2-min-root-ebs-size-gb 400 --spark-executor-instances 50 test-cluster
 ```
 
 Copy over the your DIZK jar file to the cluster
@@ -65,8 +66,10 @@ python3 -m flintrock login --ec2-identity-file=$AWS_EC2_IDENTITY_FILE --ec2-user
 
 On the master node, run proof generation job
 ```xlst
-./spark/bin/spark-submit --conf spark.driver.memory=3g --conf spark.executor.memory=3g --conf spark.executor.cores=1 --conf spark.executor.instances=50 --conf spark.logConf=true --conf spark.memory.fraction=0.95 --conf spark.memory.storageFraction=0.3 --conf spark.eventLog.enabled=true --total-executor-cores 50 --deploy-mode=client --class=profiler.Profiler --master=spark://ip-172-30-2-54:7077 dizk-1.0.jar circom_generate_proof /home/ec2-user/test_ecdsa_verify.pk /home/ec2-user/test_ecdsa_verify.wtns.json /home/ec2-user/test_ecdsa_verify.proof distributed
+./spark/bin/spark-submit --conf spark.driver.memory=3g --conf spark.executor.memory=3g --conf spark.executor.cores=1 --conf spark.executor.instances=50 --conf spark.logConf=true --conf spark.memory.fraction=0.95 --conf spark.memory.storageFraction=0.3 --conf spark.eventLog.enabled=true --total-executor-cores 50 --deploy-mode=client --class=profiler.Profiler --master=spark://<computer name of master node>:7077 dizk-1.0.jar circom_generate_proof /home/ec2-user/test_ecdsa_verify.pk /home/ec2-user/test_ecdsa_verify.wtns.json /home/ec2-user/test_ecdsa_verify.proof distributed
 ```
+
+The cluster dashboard (url: https://\<computer name of master node>:8080) can be loaded to view the running job.
 
 Print out the generated proof
 ```

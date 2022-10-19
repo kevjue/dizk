@@ -320,9 +320,9 @@ public class Profiler {
                     pk = (ProvingKey<BN254aFr, BN254aG1, BN254aG2>) Serialize.UnserializeObject(provingKeyFilename);
                     numInputs = pk.r1cs().numInputs();
                 } else {  // "runMode == distributed"
-                    final int numExecutors = 4;
+                    final int numExecutors = 50;
                     final int numCores = 1;
-                    final int numMemory = 6;
+                    final int numMemory = 3;
 
                     final long size = ProvingKeyRDD.getNumConstraintsFromFile(provingKeyFilename);
                     final int numPartitions = SparkUtils.numPartitions(numExecutors, size);
