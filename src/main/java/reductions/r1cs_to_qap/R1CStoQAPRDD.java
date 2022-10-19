@@ -184,6 +184,8 @@ public class R1CStoQAPRDD implements Serializable {
         // TODO (howardwu): Replace hardcoded popular variable assignment indices with list of
         // these indices from R1CSRelationRDD.
         config.beginLog("Compute evaluation of polynomials A, B, and C, on set S.");
+
+        // zeroIndex* vars will be mapping of contraint number -> zero'th indexed number value
         final JavaPairRDD<Long, FieldT> zeroIndexedA = r1cs.constraints().A()
                 .filter(e -> e._2.index() == 0)
                 .mapValues(LinearTerm::value)
@@ -205,6 +207,8 @@ public class R1CStoQAPRDD implements Serializable {
                     return new Tuple2<>(term._2.index(), new Tuple2<>(term._1, term._2.value()));
                 }).join(oneFullAssignment, config.numPartitions()).mapToPair(term -> {
                     // Multiply the constraint value by the input value.
+                    // term._2._1._1 is the constraint number
+                    // term._2._1._2 is the index value
                     return new Tuple2<>(term._2._1._1, term._2._1._2.mul(term._2._2));
                 }).union(additionalA).union(zeroIndexedA).reduceByKey(FieldT::add);
 
@@ -229,6 +233,7 @@ public class R1CStoQAPRDD implements Serializable {
 
         final int rows = (int) MathUtils.lowestPowerOfTwo((long) Math.sqrt(domainSize));
         final int cols = (int) (domainSize / rows);
+        assert(cols == 2);
 
         config.beginLog("Perform radix-2 inverse FFT to determine the coefficients of A, B, and C.");
         A = DistributedFFT.radix2InverseFFT(A, rows, cols, fieldFactory);

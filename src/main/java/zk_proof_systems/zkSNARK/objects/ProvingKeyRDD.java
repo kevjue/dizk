@@ -127,16 +127,16 @@ public class ProvingKeyRDD<FieldT extends AbstractFieldElementExpanded<FieldT>, 
         final G1T _deltaG1 = (G1T) Serialize.UnserializeObject(Paths.get(dirName, "deltaG1").toString());
         final G2T _deltaG2 = (G2T) Serialize.UnserializeObject(Paths.get(dirName, "deltaG2").toString());
 
-        JavaRDD<Tuple2<Long, G1T>> _deltaABCRDD = config.sparkContext().objectFile(Paths.get(dirName, "deltaABC").toString());
+        JavaRDD<Tuple2<Long, G1T>> _deltaABCRDD = config.sparkContext().objectFile(Paths.get(dirName, "deltaABC").toString(), config.numPartitions());
         JavaPairRDD<Long, G1T> _deltaABC =  _deltaABCRDD.mapToPair(e -> e);
 
         JavaRDD<Tuple2<Long, G1T>> _queryARDD = config.sparkContext().objectFile(Paths.get(dirName, "queryA").toString());
         JavaPairRDD<Long, G1T> _queryA = _queryARDD.mapToPair(e -> e);
 
-        JavaRDD<Tuple2<Long, Tuple2<G1T, G2T>>> _queryBRDD = config.sparkContext().objectFile(Paths.get(dirName, "queryB").toString());
+        JavaRDD<Tuple2<Long, Tuple2<G1T, G2T>>> _queryBRDD = config.sparkContext().objectFile(Paths.get(dirName, "queryB").toString(), config.numPartitions());
         JavaPairRDD<Long, Tuple2<G1T, G2T>> _queryB =  _queryBRDD.mapToPair(e -> e);
 
-        JavaRDD<Tuple2<Long, G1T>> _queryHRDD = config.sparkContext().objectFile(Paths.get(dirName, "queryH").toString());
+        JavaRDD<Tuple2<Long, G1T>> _queryHRDD = config.sparkContext().objectFile(Paths.get(dirName, "queryH").toString(), config.numPartitions());
         JavaPairRDD<Long, G1T> _queryH =  _queryHRDD.mapToPair(e -> e);
 
         R1CSRelationRDD<FieldT> _r1cs = R1CSRelationRDD.loadFromObjectFile(Paths.get(dirName, "r1cs").toString(), config);

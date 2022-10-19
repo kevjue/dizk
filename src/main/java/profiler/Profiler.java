@@ -273,7 +273,9 @@ public class Profiler {
                     final int numMemory = 8;
                     final int numPartitions = SparkUtils.numPartitions(numExecutors, r1cs.numConstraints());
 
-                    final SparkConf conf = new SparkConf().setMaster("local").setAppName("default");
+                    System.out.println("num partitions is " + numPartitions);
+
+                    final SparkConf conf = new SparkConf().setMaster("local").setAppName("circom setup" + System.currentTimeMillis());
                     //conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer");
                     //conf.set("spark.kryo.registrationRequired", "true");
                     //conf.registerKryoClasses(SparkUtils.zksparkClasses());
@@ -290,6 +292,7 @@ public class Profiler {
                             StorageLevel.MEMORY_AND_DISK_SER());
                     config.setDebugFlag(true);
                     config.setSeed((long) 57345);
+
                     final R1CSRelationRDD<BN254aFr> distributedR1CS = new R1CSRelationRDD<BN254aFr>(r1cs, config);
                     crs = DistributedSetup.generate(distributedR1CS, fieldFactory, g1Factory, g2Factory, pairing, config);
                 }
@@ -317,14 +320,15 @@ public class Profiler {
                     pk = (ProvingKey<BN254aFr, BN254aG1, BN254aG2>) Serialize.UnserializeObject(provingKeyFilename);
                     numInputs = pk.r1cs().numInputs();
                 } else {  // "runMode == distributed"
-                    final int numExecutors = 1;
+                    final int numExecutors = 4;
                     final int numCores = 1;
-                    final int numMemory = 8;
+                    final int numMemory = 6;
 
                     final long size = ProvingKeyRDD.getNumConstraintsFromFile(provingKeyFilename);
                     final int numPartitions = SparkUtils.numPartitions(numExecutors, size);
+                    System.out.println("numPartitions: " + numPartitions);
 
-                    final SparkConf conf = new SparkConf().setMaster("local").setAppName("default");
+                    final SparkConf conf = new SparkConf().setAppName("circom generate proof " + System.currentTimeMillis());
                     //conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer");
                     //conf.set("spark.kryo.registrationRequired", "true");
                     //conf.registerKryoClasses(SparkUtils.zksparkClasses());
@@ -339,7 +343,7 @@ public class Profiler {
                         numPartitions,
                         sc,
                         StorageLevel.MEMORY_AND_DISK_SER());
-                    config.setDebugFlag(true);
+                    config.setDebugFlag(false);
 
                     pkRDD = ProvingKeyRDD.loadFromObjectFile(provingKeyFilename, config);
                     numInputs = pkRDD.r1cs().numInputs();
@@ -353,6 +357,8 @@ public class Profiler {
                 }
 
                 final Tuple2<Assignment<BN254aFr>, Assignment<BN254aFr>> witnessTuple = Circom.readWitnessFile(witnessFR, numInputs);
+                System.out.println("Witness file read.  Primary size is " + witnessTuple._1().size() + ". Auxillary size is " + witnessTuple._2().size());
+
                 final BN254aFr fieldFactory = new BN254aFr(2L);
                 config.setSeed((long) 646373);
                 Proof<BN254aG1, BN254aG2> proof;
@@ -363,7 +369,8 @@ public class Profiler {
                     oneFullAssignment.addAll(witnessTuple._1().elements());
                     oneFullAssignment.addAll(witnessTuple._2().elements());
                     List<Tuple2<Long, BN254aFr>> fullWitnessPairs = IntStream.range(0, oneFullAssignment.size()).mapToObj(i -> new Tuple2<>(new Long(i), oneFullAssignment.get(i))).collect(Collectors.toList());
-                    JavaPairRDD<Long, BN254aFr> fullWitnessRDD = config.sparkContext().parallelizePairs(fullWitnessPairs);
+                    System.out.println("full witness pairs has been calculated");
+                    JavaPairRDD<Long, BN254aFr> fullWitnessRDD = config.sparkContext().parallelizePairs(fullWitnessPairs, config.numPartitions()).cache();
                     proof = DistributedProver.prove(pkRDD, witnessTuple._1(), fullWitnessRDD, fieldFactory, config);
                 }
 

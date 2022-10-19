@@ -63,7 +63,7 @@ public class DistributedSetup {
         }
 
         // A quadratic arithmetic program evaluated at t.
-        final QAPRelationRDD<FieldT> qap = R1CStoQAPRDD.R1CStoQAPRelation(r1cs, t, config);
+        QAPRelationRDD<FieldT> qap = R1CStoQAPRDD.R1CStoQAPRelation(r1cs, t, config);
 
         final int numInputs = qap.numInputs();
         final long numVariables = qap.numVariables();
@@ -88,8 +88,8 @@ public class DistributedSetup {
         config.endLog("Computing deltaABC and gammaABC for R1CS proving key and verification key");
 
         config.beginLog("Computing query densities");
-        final long numNonZeroAt = qap.At().filter(e -> !e._2.isZero()).count();
-        final long numNonZeroBt = qap.Bt().filter(e -> !e._2.isZero()).count();
+        long numNonZeroAt = qap.At().filter(e -> !e._2.isZero()).count();
+        long numNonZeroBt = qap.Bt().filter(e -> !e._2.isZero()).count();
         config.endLog("Computing query densities");
 
         config.beginLog("Generating G1 MSM Window Table");
@@ -159,7 +159,7 @@ public class DistributedSetup {
                 windowTableG2,
                 qap.Bt(),
                 config.sparkContext()).persist(config.storageLevel());
-        queryB.count();
+        System.out.println("qap.Bt size is " + qap.Bt().count());
         qap.Bt().unpersist();
         config.endLog("Computing query B");
 

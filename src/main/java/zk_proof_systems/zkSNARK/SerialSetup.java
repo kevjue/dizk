@@ -72,7 +72,7 @@ public class SerialSetup {
 
         // The gamma inverse product component: (beta*A_i(t) + alpha*B_i(t) + C_i(t)) * gamma^{-1}.
         config.beginLog("Computing gammaABC for R1CS verification key");
-        final List<FieldT> gammaABC = new ArrayList<>(numInputs);
+        List<FieldT> gammaABC = new ArrayList<>(numInputs);
         for (int i = 0; i < numInputs; i++) {
             gammaABC.add(beta.mul(qap.At(i)).add(alpha.mul(qap.Bt(i))).add(qap.Ct(i)).mul(inverseGamma));
         }
@@ -80,7 +80,7 @@ public class SerialSetup {
 
         // The delta inverse product component: (beta*A_i(t) + alpha*B_i(t) + C_i(t)) * delta^{-1}.
         config.beginLog("Computing deltaABC for R1CS proving key");
-        final List<FieldT> deltaABC = new ArrayList<>(numVariables - numInputs);
+        List<FieldT> deltaABC = new ArrayList<>(numVariables - numInputs);
         for (int i = numInputs; i < numVariables; i++) {
             deltaABC.add(beta.mul(qap.At(i)).add(alpha.mul(qap.Bt(i))).add(qap.Ct(i)).mul(inverseDelta));
         }
@@ -108,7 +108,7 @@ public class SerialSetup {
         final int scalarCountG1 = nonZeroAt + nonZeroBt + numVariables;
         final int scalarSizeG1 = generatorG1.bitSize();
         final int windowSizeG1 = FixedBaseMSM.getWindowSize(scalarCountG1, generatorG1);
-        final List<List<G1T>> windowTableG1 = FixedBaseMSM
+        List<List<G1T>> windowTableG1 = FixedBaseMSM
                 .getWindowTable(generatorG1, scalarSizeG1, windowSizeG1);
         config.endLog("Generating G1 MSM Window Table");
 
@@ -121,7 +121,7 @@ public class SerialSetup {
         final int scalarCountG2 = nonZeroBt;
         final int scalarSizeG2 = generatorG2.bitSize();
         final int windowSizeG2 = FixedBaseMSM.getWindowSize(scalarCountG2, generatorG2);
-        final List<List<G2T>> windowTableG2 = FixedBaseMSM
+        List<List<G2T>> windowTableG2 = FixedBaseMSM
                 .getWindowTable(generatorG2, scalarSizeG2, windowSizeG2);
         config.endLog("Generating G2 MSM Window Table");
 
@@ -139,6 +139,8 @@ public class SerialSetup {
                 .batchMSM(scalarSizeG1, windowSizeG1, windowTableG1, deltaABC);
         config.endLog("Encode deltaABC for R1CS proving key", false);
 
+        deltaABC = null;
+
         config.beginLog("Computing query A", false);
         final List<G1T> queryA = FixedBaseMSM
                 .batchMSM(scalarSizeG1, windowSizeG1, windowTableG1, qap.At());
@@ -154,6 +156,9 @@ public class SerialSetup {
                 windowTableG2,
                 qap.Bt());
         config.endLog("Computing query B", false);
+
+        // Free up memory
+        windowTableG2 = null;
 
         config.beginLog("Computing query H", false);
         final FieldT inverseDeltaZt = qap.Zt().mul(delta.inverse());
@@ -177,6 +182,10 @@ public class SerialSetup {
         final List<G1T> gammaABCG1 = FixedBaseMSM
                 .batchMSM(scalarSizeG1, windowSizeG1, windowTableG1, gammaABC);
         config.endLog("Encoding gammaABC for R1CS verification key");
+
+        // Free up memory
+        gammaABC = null;
+        windowTableG1 = null;
 
         config.endLog("Generating R1CS verification key");
         config.endRuntime("Verification Key");

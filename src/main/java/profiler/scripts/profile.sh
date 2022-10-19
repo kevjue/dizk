@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Copy project to worker nodes
-./spark-ec2/copy-dir /home/ec2-user/
+#./spark-ec2/copy-dir /home/ec2-user/
 
 export JAVA_HOME="/usr/lib/jvm/java-1.8.0"
 
@@ -16,7 +16,7 @@ for TOTAL_CORES in 8; do
     export NUM_EXECUTORS=$((TOTAL_CORES / CORES))
     export NUM_PARTITIONS=$((TOTAL_CORES * MULTIPLIER))
 
-    /root/spark/bin/spark-submit \
+    echo "/root/spark/bin/spark-submit \
       --conf spark.driver.memory=$MEMORY \
       --conf spark.driver.maxResultSize=$MEMORY \
       --conf spark.executor.cores=$CORES \
@@ -37,7 +37,7 @@ for TOTAL_CORES in 8; do
       --conf spark.eventLog.dir=/tmp/spark-events \
       --conf spark.eventLog.enabled=false \
       --class "profiler.Profiler" \
-      /home/ec2-user/dizk-1.0.jar $NUM_EXECUTORS $CORES $MEMORY $APP $SIZE $NUM_PARTITIONS
+      /home/ec2-user/dizk-1.0.jar $NUM_EXECUTORS $CORES $MEMORY $APP $SIZE $NUM_PARTITIONS"
   done
 done
 

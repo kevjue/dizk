@@ -85,13 +85,13 @@ public class R1CSConstraintsRDD<FieldT extends AbstractFieldElementExpanded<Fiel
     }
 
     public static <FieldT extends AbstractFieldElementExpanded<FieldT>> R1CSConstraintsRDD<FieldT> loadFromObjectFile(String dirName, Configuration config) throws IOException{
-        final JavaRDD<Tuple2<Long, LinearTerm<FieldT>>> _ARDD = config.sparkContext().objectFile(Paths.get(dirName, "A").toString());
+        final JavaRDD<Tuple2<Long, LinearTerm<FieldT>>> _ARDD = config.sparkContext().objectFile(Paths.get(dirName, "A").toString(), config.numPartitions());
         final JavaPairRDD<Long, LinearTerm<FieldT>> _A =  _ARDD.mapToPair(e -> e);
 
-        final JavaRDD<Tuple2<Long, LinearTerm<FieldT>>> _BRDD = config.sparkContext().objectFile(Paths.get(dirName, "B").toString());
+        final JavaRDD<Tuple2<Long, LinearTerm<FieldT>>> _BRDD = config.sparkContext().objectFile(Paths.get(dirName, "B").toString(), config.numPartitions());
         final JavaPairRDD<Long, LinearTerm<FieldT>> _B =  _BRDD.mapToPair(e -> e);
 
-        final JavaRDD<Tuple2<Long, LinearTerm<FieldT>>> _CRDD = config.sparkContext().objectFile(Paths.get(dirName, "C").toString());
+        final JavaRDD<Tuple2<Long, LinearTerm<FieldT>>> _CRDD = config.sparkContext().objectFile(Paths.get(dirName, "C").toString(), config.numPartitions());
         final JavaPairRDD<Long, LinearTerm<FieldT>> _C =  _CRDD.mapToPair(e -> e);
 
         final long _constraintSize = (long) Serialize.UnserializeObject(Paths.get(dirName, "constraintSize").toString());

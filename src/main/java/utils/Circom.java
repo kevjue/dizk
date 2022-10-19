@@ -1,105 +1,149 @@
 package utils;
 
 import java.io.FileReader;
-import java.util.Iterator;
-import java.util.Set;
-import java.util.Map.Entry;
+import java.io.IOException;
+
+import javax.print.event.PrintJobListener;
 
 import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonToken;
 
 import algebra.curves.barreto_naehrig.bn254a.BN254aFields.BN254aFr;
 import relations.objects.Assignment;
 import relations.objects.LinearCombination;
 import relations.objects.LinearTerm;
-import relations.objects.R1CSConstraints;
 import relations.objects.R1CSConstraint;
+import relations.objects.R1CSConstraints;
 import relations.r1cs.R1CSRelation;
 import scala.Tuple2;
 
 public class Circom {
-    public static R1CSRelation<BN254aFr> readR1CSFile(final FileReader r1csFile) {
-        final JsonParser jsonParser = new JsonParser();
-        final JsonObject jsonObj = (JsonObject) jsonParser.parse(r1csFile);
+    public static R1CSRelation<BN254aFr> readR1CSFile(final FileReader r1csFile) throws IOException {
+        final JsonReader jsonReader = new JsonReader(r1csFile);
 
-        final int numConstraints = jsonObj.get("nConstraints").getAsInt();
-
-        // The +1 is for the constant "variable" within the constraints.  That value will be the first element
-        // in the witness file and will always have the value of 1.
-        final int numInputs = jsonObj.get("nPubInputs").getAsInt() + jsonObj.get("nOutputs").getAsInt() + 1;
-
-        final int numAuxiliary = jsonObj.get("nVars").getAsInt() - numInputs;
-
+        int numConstraints = 0;
+        int numInputs = 1;  // Is nPubInputs + nOutputs + 1.  The +1 is for the constant "variable" within the constraints.
+        int numAuxiliary = 0;   // Is nVars - numInputs (above java variable)
         final R1CSConstraints<BN254aFr> constraints = new R1CSConstraints<BN254aFr>();
-        final JsonArray jsonConstraints = jsonObj.get("constraints").getAsJsonArray();
 
-        System.out.println("r1cs file nConstraints is " + numConstraints);
-        for (int i = 0; i < numConstraints; i++) {
-            JsonArray jsonConstraint = jsonConstraints.get(i).getAsJsonArray();
-            JsonObject AJsonObj = (JsonObject) jsonConstraint.get(0);
-            JsonObject BJsonObj = (JsonObject) jsonConstraint.get(1);
-            JsonObject CJsonObj = (JsonObject) jsonConstraint.get(2);
+        jsonReader.beginObject();
+        while (jsonReader.hasNext()) {
+            String name = jsonReader.nextName();
 
-            Set<Entry<String,JsonElement>> aEntries = AJsonObj.entrySet();
-            Set<Entry<String,JsonElement>> bEntries = BJsonObj.entrySet();
-            Set<Entry<String,JsonElement>> cEntries = CJsonObj.entrySet();
+            if (name.equals("n8") || 
+                    name.equals("prime") || 
+                    name.equals("nPrvInputs") || 
+                    name.equals("nLabels") || 
+                    name.equals("useCustomGates") ||
+                    name.equals("customGates") ||
+                    name.equals("customGatesUses") ||
+                    name.equals("map")) {
+                // Ignore this entry
+                jsonReader.skipValue();
+            } else if (name.equals("nConstraints")) {
+                numConstraints = jsonReader.nextInt();
+            } else if (name.equals("nPubInputs")) {
+                final int value = jsonReader.nextInt();
+                numInputs += value;
+                numAuxiliary -= value;
+            } else if (name.equals("nOutputs")) {
+                final int value = jsonReader.nextInt();
+                numInputs += value;
+                numAuxiliary -= value;
+            } else if (name.equals("nVars")) {
+                numAuxiliary += jsonReader.nextInt();
+            } else if (name.equals("constraints")) {
+                jsonReader.beginObject();
 
-            LinearCombination<BN254aFr> aLinearCombination = new LinearCombination<BN254aFr>();
-            for (Iterator<Entry<String,JsonElement>> iter = aEntries.iterator(); iter.hasNext(); ) {
-                Entry<String,JsonElement> entry = iter.next();
-                int index = Integer.parseInt(entry.getKey());
-                BN254aFr value = new BN254aFr(entry.getValue().getAsBigInteger());
+                while (jsonReader.hasNext()) {
+                    name = jsonReader.nextName();
 
-                aLinearCombination.add(new LinearTerm<BN254aFr>(index, value));
+                    if (name.equals("length")) {
+                        jsonReader.skipValue();
+                    } else if (name.equals("arr")) {
+
+                        jsonReader.beginArray();
+                        while (jsonReader.hasNext()) {
+
+                            if (jsonReader.peek() == JsonToken.NULL) {
+                                jsonReader.nextNull();
+                                continue;
+                            }
+
+                            jsonReader.beginArray();
+                            while (jsonReader.hasNext())
+                            {
+                                if (jsonReader.peek() == JsonToken.NULL) {
+                                    jsonReader.nextNull();
+                                    continue;
+                                }
+
+                                // Each entry in the constraints array will have 3 arrays of objects, for the A,B,C constraints.
+                                // Each object will be key-value entries for all non zero the contraint.
+                                jsonReader.beginArray();
+            
+                                // Read the A array
+                                LinearCombination<BN254aFr> aLinearCombination = new LinearCombination<BN254aFr>();
+                                LinearCombination<BN254aFr> bLinearCombination = new LinearCombination<BN254aFr>();
+                                LinearCombination<BN254aFr> cLinearCombination = new LinearCombination<BN254aFr>();
+    
+                                LinearCombination<BN254aFr> lc;
+                                int objectIdx = 0;
+                                while (jsonReader.hasNext()) {
+                                    if (objectIdx == 0) {   // The A constraints
+                                        lc = aLinearCombination;
+                                    } else if (objectIdx == 1) {  // The B constraints
+                                        lc = bLinearCombination;
+                                    } else {    // The C constraints
+                                        lc = cLinearCombination;
+                                    }
+
+                                    // Each element in the array is an object
+                                    jsonReader.beginObject();
+            
+                                    String constraintNum;
+                                    String constraintVal;
+                                    while (jsonReader.hasNext()) {
+                                        constraintNum = jsonReader.nextName();
+                                        constraintVal = jsonReader.nextString();
+            
+                                        int index = Integer.parseInt(constraintNum);
+                                        BN254aFr value = new BN254aFr(constraintVal);
+            
+                                        lc.add(new LinearTerm<BN254aFr>(index, value));
+                                    }
+                                    jsonReader.endObject();
+                                    objectIdx++;
+                                }            
+                                R1CSConstraint<BN254aFr> constraint = new R1CSConstraint<BN254aFr>(aLinearCombination, bLinearCombination, cLinearCombination);
+                                constraints.add(constraint);
+    
+                                if (constraints.size() % 100000 == 0) {
+                                    System.out.println("constraints is " + constraints.size());
+                                }
+                                jsonReader.endArray();
+                            }    
+                            jsonReader.endArray();
+                        }
+
+                        jsonReader.endArray();
+                        System.out.println("finished parsing arr");
+                    }
+                }
+                System.out.println("finished parsing constraints object");
+                jsonReader.endObject();
             }
-
-            LinearCombination<BN254aFr> bLinearCombination = new LinearCombination<BN254aFr>();
-            for (Iterator<Entry<String,JsonElement>> iter = bEntries.iterator(); iter.hasNext(); ) {
-                Entry<String,JsonElement> entry = iter.next();
-                int index = Integer.parseInt(entry.getKey());
-                BN254aFr value = new BN254aFr(entry.getValue().getAsBigInteger());
-
-                bLinearCombination.add(new LinearTerm<BN254aFr>(index, value));
-            }
-
-            LinearCombination<BN254aFr> cLinearCombination = new LinearCombination<BN254aFr>();
-            for (Iterator<Entry<String,JsonElement>> iter = cEntries.iterator(); iter.hasNext(); ) {
-                Entry<String,JsonElement> entry = iter.next();
-                int index = Integer.parseInt(entry.getKey());
-                BN254aFr value = new BN254aFr(entry.getValue().getAsBigInteger());
-
-                cLinearCombination.add(new LinearTerm<BN254aFr>(index, value));
-            }
-
-            R1CSConstraint<BN254aFr> constraint = new R1CSConstraint<BN254aFr>(aLinearCombination, bLinearCombination, cLinearCombination);
-            constraints.add(constraint);
         }
+        jsonReader.close();
 
-        System.out.println("constraints length is " + constraints.size());
+        System.out.println("num constraints is " + numConstraints);
+        System.out.println("constraints array length is " + constraints.size());
         System.out.println("inputs length is " + numInputs);
         System.out.println("auxiliary length is " + numAuxiliary);
 
         R1CSRelation<BN254aFr> r1cs = new R1CSRelation<BN254aFr>(constraints, numInputs, numAuxiliary);
-
-        Assignment<BN254aFr> primary = new Assignment<BN254aFr>();
-        primary.add(new BN254aFr("1"));
-        primary.add(new BN254aFr("12201"));
-        primary.add(new BN254aFr("1"));
-
-        Assignment<BN254aFr> auxilary = new Assignment<BN254aFr>();
-        auxilary.add(new BN254aFr("2"));
-        auxilary.add(new BN254aFr("3"));
-        auxilary.add(new BN254aFr("4"));
-        auxilary.add(new BN254aFr("83"));
-        auxilary.add(new BN254aFr("5"));
-        auxilary.add(new BN254aFr("16"));
-        auxilary.add(new BN254aFr("147"));
-        auxilary.add(new BN254aFr("6"));
-        auxilary.add(new BN254aFr("24"));
-
-        System.out.println("isSatisfied is " + r1cs.isSatisfied(primary, auxilary));
 
         return r1cs;
     }
@@ -107,15 +151,19 @@ public class Circom {
     public static Tuple2<Assignment<BN254aFr>, Assignment<BN254aFr>> readWitnessFile(final FileReader wtnsFile, final int numInputs) {
         final JsonParser parser = new JsonParser();
         final JsonArray witness = (JsonArray) parser.parse(wtnsFile);
+
+        // Primary will contain the public input
         Assignment<BN254aFr> primary = new Assignment<BN254aFr>();
+
+        // Auxilary contains the private witness
         Assignment<BN254aFr> auxilary = new Assignment<BN254aFr>();
 
         // Note that the first element in the witness array is for the constant "variable" in the contraints.
-        // It should always be 0.
+        // It should always be 1.
         for (int i = 0; i < witness.size(); i++) {
             BN254aFr val = new BN254aFr(witness.get(i).getAsBigInteger());
 
-            if (i < (numInputs)) {
+            if (i < numInputs) {
                 primary.add(val);
             } else {
                 auxilary.add(val);
